@@ -1,3 +1,9 @@
+# Project
+.idea
+public/TLEs
+node_modules
+*DS_Store
+
 # Logs
 logs
 *.log
