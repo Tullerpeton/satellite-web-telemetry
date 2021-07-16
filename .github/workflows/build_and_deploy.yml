@@ -39,7 +39,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.PRIVATE_KEY }}
-          script: docker stop $(docker ps -a -q)
+          script: sudo docker stop $(sudo docker ps -a -q)
       - name: run api-server
         uses: appleboy/ssh-action@master
         with:
