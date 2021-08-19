@@ -1,0 +1,50 @@
+name: Build and deploy
+
+env:
+  API_SERVER_TAG: v1.7
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Login to DockerHub Registry
+        run: echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+      - name: Build Docker api-server image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/api-server:${{ env.API_SERVER_TAG }} --target api-server .
+      - name: Push the api_server image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/api-server:${{ env.API_SERVER_TAG }}
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: pull api-server docker image
+        uses: appleboy/ssh-action@master
+        with:
+          envs: GITHUB_SHA
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          script: sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/api-server:${{ env.API_SERVER_TAG }}
+      - name: stop all other containers
+        uses: appleboy/ssh-action@master
+        with:
+          envs: GITHUB_SHA
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          script: sudo docker stop $(sudo docker ps -a -q)
+      - name: run api-server
+        uses: appleboy/ssh-action@master
+        with:
+          envs: GITHUB_SHA
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          script: sudo docker run -d -p 8080:3000 ${{ secrets.DOCKERHUB_USERNAME }}/api-server:${{ env.API_SERVER_TAG }}
